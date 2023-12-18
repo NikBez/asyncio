@@ -9,15 +9,21 @@ from src.db.models import Swapi
 async def swapi_handler():
     counter = 1
     while counter < 100:
-        swapi_chunk = []
-        for person_id in range(counter, counter + settings.chunk_size):
-            swapi_chunk.append(get_swapi_data(person_id))
+        swapi_chunk = [
+            get_swapi_data(person_id)
+            for person_id in range(counter, counter + settings.chunk_size)
+        ]
         result = await asyncio.gather(*swapi_chunk)
         cleared_persons = await clear_empty_elements(result)
-        await connection.insert_all(
-            [Swapi().from_dict(person) for person in cleared_persons]
+        asyncio.create_task(
+            connection.insert_all(
+                [Swapi().from_dict(person) for person in cleared_persons]
+            )
         )
         counter += settings.chunk_size
+    tasks = asyncio.all_tasks() - {asyncio.current_task()}
+    await asyncio.gather(*tasks)
+    await connection.close_connection()
 
 
 async def get_swapi_data(person_id: int):

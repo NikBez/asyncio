@@ -16,7 +16,11 @@ class DBConnnector:
 
     async def init_models(self):
         async with self.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
+
+    async def close_connection(self):
+        await self.engine.dispose()
 
     async def get_session(self):
         async with self.Session_factory() as session:
